@@ -10,14 +10,6 @@
     polyMap.set(start, [start[0] + end, end + start[1]]);
   });
 
-  function getCountMap(arr) {
-      const countMap = new Map();
-      for (const letter of arr) {
-          countMap.set(letter, countMap.get(letter) ? countMap.get(letter) + 1 : 1);
-      }
-      return countMap;
-  }
-
   function getMinMax(countMap) {
       const countArr = [...countMap];
       const min = countArr.reduce((acc, cur) => cur[1] < acc[1] ? cur : acc);
