@@ -1,15 +1,16 @@
 const lineReader = require('readline').createInterface({
-    input: require('fs').createReadStream('./data4.txt')
+    input: require('fs').createReadStream('./data.txt')
   });
 
-let graph = new Map();
-let paths = 0;
+let graph = new Map(), paths = 0;
 
 function addEdge(from, to) {
-    if (graph.has(from)) {
-        graph.set(from, [...graph.get(from), to]);
-    } else {
-        graph.set(from, [to]);
+    if (from != 'end' && to != 'start') {
+        if (graph.has(from)) {
+            graph.set(from, [...graph.get(from), to]);
+        } else {
+            graph.set(from, [to]);
+        }
     }
 }
 
@@ -20,23 +21,23 @@ lineReader.on('line', (line) => {
 });
 
 lineReader.on('close', () => {
-    console.log(graph);
-    function find(current, history, notAllowed = new Set()) {
+    function find(current, history, notAllowed = new Set(), limitSmall = false) {
         const turnOptions = graph.get(current);
-        if (turnOptions.length == 0) {
+        if (current.toLowerCase() === current) {
+            if (notAllowed.has(current)) {
+                limitSmall = true;
+            }
+            notAllowed.add(current);
+        }
+        if (turnOptions?.length == 0) {
             return null;
         } else if (current.toLowerCase() == 'end') {
             paths++;
-            console.log('Found end. History:', [...history, current]);
             return null;
         } else {
-            for (let i = 0; i < turnOptions.length; i++) {
-
-                if (!notAllowed.has(turnOptions[i])) {
-                    if (current.toLowerCase() === current) {
-                        notAllowed.add(current);
-                    }
-                    find(turnOptions[i], [...history, current], new Set(notAllowed));
+            for (let destination of turnOptions) {
+                if (!notAllowed.has(destination) || notAllowed.has(destination) && !limitSmall) {
+                    find(destination, [...history, current], new Set(notAllowed), limitSmall);
                 }
             }
         }
