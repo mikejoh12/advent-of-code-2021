@@ -77,7 +77,7 @@ function decodePacket(str) {
                 version,
                 type: 'operator',
                 lengthId,
-                subpacketLength: length,
+                subPacketLength: length,
                 end: 7 + 15 + subPacketLength,
                 remainingStr: str.slice(22, + subPacketLength)
             }
@@ -102,6 +102,7 @@ function solve(packet) {
     let count = 0, versionSum = 0;
     function find(packet) {
         count++;
+        console.log('count', count);
         const decoded = decodePacket(packet);
         console.log(decoded);
         let { remainingStr, version, type, lengthId } = decoded;
@@ -109,19 +110,24 @@ function solve(packet) {
         if (remainingStr) {
             const subPacketType = findPacketType(remainingStr);
             if (type == 'operator' && lengthId == 0) {
+                const { subPacketLength } = decoded;
+                remainingStr = remainingStr.slice(0, subPacketLength);
                 if (subPacketType == 'literal-value') {
+                    console.log('TYPE 0 containing Literal vales. remainingStr', remainingStr, 'subPacketLength', subPacketLength);
                     while(remainingStr && remainingStr.length >= 11) {
                         const rem = parseLiteral(remainingStr);
                         versionSum += rem.version;
                         console.log(rem);
                         remainingStr = rem.remainingStr;
                     }
+                    return;
                 } else {
                     find(remainingStr);
+                    return;
                 }
             } else if (type == 'operator' && lengthId == 1) {
+                const { nrSubpackets } = decoded;
                 if (subPacketType == 'literal-value') {
-                    const { nrSubpackets } = decoded;
                     for (let i = 1; i <= nrSubpackets; i++) {
                         const rem = parseLiteral(remainingStr);
                         versionSum += rem.version;
@@ -129,8 +135,17 @@ function solve(packet) {
                         remainingStr = rem.remainingStr;
                         if (remainingStr.length < 11) break;
                     }
+                    return;
                 } else {
-                    find(remainingStr);
+                    for (let i = 1; i <= nrSubpackets; i++) {
+                        console.log('IN OP TYPE 1 LOOP iter', i, remainingStr);
+                        find(remainingStr);
+                        const info = decodePacket(remainingStr);
+                        console.log('info', info);
+                        remainingStr = info.remainingStr;
+
+                    }
+                    return;
                 }
             }
         }
@@ -152,12 +167,11 @@ const example1 = hex2bin('8A004A801A8002F478');
 console.log('example1', solve(example1));
 */
 
-const example2 = hex2bin('620080001611562C8802118E34');
+const example2 = hex2bin('620080001611562C8802118E34'); // NOT PASSING
 console.log('example2', solve(example2));
 
-
 /*
-const example3 = hex2bin('C0015000016115A2E0802F182340');
+const example3 = hex2bin('C0015000016115A2E0802F182340'); // NOT PASSING
 console.log('example3', solve(example3));
 
 
