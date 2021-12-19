@@ -50,7 +50,6 @@ function findEndLiteral(str) {
 
 function parseLiteral(str) {
     const version = parseInt(str.slice(0, 3), 2);
-    const typeId = str.slice(3, 6);
     const value = decodeLiteral(str.slice(6))
     const end = findEndLiteral(str);
     return {
@@ -58,7 +57,7 @@ function parseLiteral(str) {
         type: 'literal-value',
         value: value,
         end,
-        remainingStr: str.slice(end + 1 + 3)
+        remainingStr: str.slice(end + 1)
     }
 }
 
@@ -105,18 +104,35 @@ function solve(packet) {
         count++;
         const decoded = decodePacket(packet);
         console.log(decoded);
-        const { remainingStr, version, type, lengthId } = decoded;
+        let { remainingStr, version, type, lengthId } = decoded;
         versionSum += version;
         if (remainingStr) {
+            const subPacketType = findPacketType(remainingStr);
             if (type == 'operator' && lengthId == 0) {
-                find(remainingStr);
+                if (subPacketType == 'literal-value') {
+                    while(remainingStr && remainingStr.length >= 11) {
+                        const rem = parseLiteral(remainingStr);
+                        versionSum += rem.version;
+                        console.log(rem);
+                        remainingStr = rem.remainingStr;
+                    }
+                } else {
+                    find(remainingStr);
+                }
             } else if (type == 'operator' && lengthId == 1) {
-                find(remainingStr);
-            } else {
-                // Decode Literal Values - Dont recurse
-                find(remainingStr);
+                if (subPacketType == 'literal-value') {
+                    const { nrSubpackets } = decoded;
+                    for (let i = 1; i <= nrSubpackets; i++) {
+                        const rem = parseLiteral(remainingStr);
+                        versionSum += rem.version;
+                        console.log(rem);
+                        remainingStr = rem.remainingStr;
+                        if (remainingStr.length < 11) break;
+                    }
+                } else {
+                    find(remainingStr);
+                }
             }
-
         }
     }
 
@@ -124,16 +140,26 @@ function solve(packet) {
     return versionSum;
 }
 
+/*
+const op1 = '00111000000000000110111101000101001010010001001000000000';
+console.log('op1', solve(op1));
+
+const op2 = '11101110000000001101010000001100100000100011000001100000';
+console.log('op2', solve(op2));
+
 
 const example1 = hex2bin('8A004A801A8002F478');
 console.log('example1', solve(example1));
+*/
 
-/*
 const example2 = hex2bin('620080001611562C8802118E34');
 console.log('example2', solve(example2));
 
+
+/*
 const example3 = hex2bin('C0015000016115A2E0802F182340');
 console.log('example3', solve(example3));
+
 
 const example4 = hex2bin('A0016C880162017C3686B18A3D4780');
 console.log('example4', solve(example4));
