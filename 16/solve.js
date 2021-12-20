@@ -70,7 +70,6 @@ function decodePacket(str) {
     } else { // operator packet
         const lengthId = str.slice(6, 7);
         if (lengthId == 0) { // next 15 bits = length in bits of subpackets
-            console.log('lengthId', lengthId);
             const subPacketLength = str.slice(7, 22);
             const length = parseInt(subPacketLength, 2);
             return {
@@ -83,8 +82,6 @@ function decodePacket(str) {
             }
         } else { // next 11 bits = nr of subpackets
             const nrSubpackets = parseInt(str.slice(7, 18), 2);
-            console.log('lengthId', lengthId, 'nrSubpackets', nrSubpackets);
-            console.log('str.Slice',str.slice(0, 22));
             return {
                 version,
                 type: 'operator',
@@ -102,60 +99,54 @@ function solve(packet) {
     let count = 0, versionSum = 0;
     function find(packet) {
         count++;
-        console.log('count', count);
         const decoded = decodePacket(packet);
-        console.log(decoded);
+        //console.log('decoded', decoded);
         let { remainingStr, version, type, lengthId } = decoded;
         versionSum += version;
         if (remainingStr) {
             const subPacketType = findPacketType(remainingStr);
             if (type == 'operator' && lengthId == 0) {
                 const { subPacketLength } = decoded;
+                const returnString = remainingStr.slice(subPacketLength);
                 remainingStr = remainingStr.slice(0, subPacketLength);
                 if (subPacketType == 'literal-value') {
-                    console.log('TYPE 0 containing Literal vales. remainingStr', remainingStr, 'subPacketLength', subPacketLength);
                     while(remainingStr && remainingStr.length >= 11) {
                         const rem = parseLiteral(remainingStr);
+                        console.log('type 0 literal', rem);
                         versionSum += rem.version;
-                        console.log(rem);
                         remainingStr = rem.remainingStr;
                     }
-                    return;
                 } else {
-                    find(remainingStr);
-                    return;
+                    while(remainingStr && remainingStr.length >= 11) {
+                        remainingStr = find(remainingStr);
+                    }
+                    return returnString;
                 }
+                return returnString;
             } else if (type == 'operator' && lengthId == 1) {
                 const { nrSubpackets } = decoded;
                 if (subPacketType == 'literal-value') {
                     for (let i = 1; i <= nrSubpackets; i++) {
                         const rem = parseLiteral(remainingStr);
                         versionSum += rem.version;
-                        console.log(rem);
                         remainingStr = rem.remainingStr;
-                        if (remainingStr.length < 11) break;
                     }
-                    return;
+                    return remainingStr;
                 } else {
                     for (let i = 1; i <= nrSubpackets; i++) {
-                        console.log('IN OP TYPE 1 LOOP iter', i, remainingStr);
-                        find(remainingStr);
-                        const info = decodePacket(remainingStr);
-                        console.log('info', info);
-                        remainingStr = info.remainingStr;
-
+                        remainingStr = find(remainingStr);
                     }
-                    return;
+                    return remainingStr;
                 }
             }
         }
     }
 
     find(packet);
+    console.log('count', count);
     return versionSum;
 }
 
-/*
 const op1 = '00111000000000000110111101000101001010010001001000000000';
 console.log('op1', solve(op1));
 
@@ -165,16 +156,18 @@ console.log('op2', solve(op2));
 
 const example1 = hex2bin('8A004A801A8002F478');
 console.log('example1', solve(example1));
-*/
+
 
 const example2 = hex2bin('620080001611562C8802118E34'); // NOT PASSING
 console.log('example2', solve(example2));
 
-/*
 const example3 = hex2bin('C0015000016115A2E0802F182340'); // NOT PASSING
 console.log('example3', solve(example3));
 
 
 const example4 = hex2bin('A0016C880162017C3686B18A3D4780');
 console.log('example4', solve(example4));
+/*
+const problem1 = hex2bin(input);
+console.log('problem1', solve(problem1));
 */
